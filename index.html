@@ -2,76 +2,70 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Smart Home Energy Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Home Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
       :root {
-        --bg: #f1f5f9;
-        --card: #ffffff;
-        --room-0: #3b82f6;
-        --room-1: #10b981;
-        --room-2: #f59e0b;
-        --room-3: #8b5cf6;
+        --bg: #f8fafc;
+        --white: #ffffff;
+        --blue: #3b82f6;
+        --green: #10b981;
+        --orange: #f59e0b;
+        --purple: #8b5cf6;
       }
+
       body {
-        font-family: "Inter", sans-serif;
+        font-family: system-ui, sans-serif;
         background: var(--bg);
-        padding: 20px;
-        color: #1e293b;
+        margin: 0;
+        padding: 15px;
       }
       .header {
         text-align: center;
-        margin-bottom: 25px;
+        margin-bottom: 20px;
       }
+
+      /* Responsive Grid */
       .room-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 20px;
-        margin-bottom: 30px;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 15px;
+        margin-bottom: 25px;
       }
+
       .card {
-        background: var(--card);
+        background: var(--white);
         border-radius: 12px;
         padding: 20px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        position: relative;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        border-top: 5px solid var(--blue);
       }
-      .card-0 {
-        border-top: 5px solid var(--room-0);
-      }
-      .card-1 {
-        border-top: 5px solid var(--room-1);
-      }
-      .card-2 {
-        border-top: 5px solid var(--room-2);
-      }
-      .card-3 {
-        border-top: 5px solid var(--room-3);
-      }
-      .mode-indicator {
+
+      .mode {
         float: right;
         font-size: 0.7rem;
-        padding: 4px 10px;
-        border-radius: 20px;
         font-weight: bold;
+        padding: 4px 8px;
+        border-radius: 20px;
       }
-      .mode-auto {
+      .auto {
         background: #dcfce7;
         color: #166534;
       }
-      .mode-manual {
+      .manual {
         background: #fee2e2;
         color: #991b1b;
       }
+
       .stat {
         display: flex;
         justify-content: space-between;
         margin: 10px 0;
-        font-size: 0.9rem;
       }
       .pill {
-        padding: 3px 10px;
-        border-radius: 6px;
+        padding: 3px 8px;
+        border-radius: 5px;
         font-size: 0.75rem;
         font-weight: bold;
       }
@@ -90,6 +84,7 @@
         background: #fef9c3;
         color: #854d0e;
       }
+
       .controls {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -102,7 +97,6 @@
         padding: 10px;
         border-radius: 8px;
         font-weight: bold;
-        transition: 0.2s;
       }
       .btn-ac {
         background: #e0f2fe;
@@ -112,85 +106,60 @@
         background: #f0fdf4;
         color: #15803d;
       }
-      .btn-resume {
+      .btn-res {
         grid-column: span 2;
-        background: #3b82f6;
+        background: var(--blue);
         color: white;
         margin-top: 5px;
       }
+
       .charts {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         gap: 20px;
       }
-      .chart-container {
+      .chart-box {
         background: white;
         padding: 15px;
         border-radius: 12px;
-        height: 320px;
+        height: 300px;
       }
     </style>
   </head>
   <body>
     <div class="header">
-      <h1>Smart Home Energy Management Dashboard</h1>
-      <p
-        id="clock"
-        style="font-weight: bold; font-size: 1.2rem; color: #3b82f6"
-      >
-        14:00
-      </p>
+      <h1>Smart Home Energy</h1>
+      <p>Live Monitoring Dashboard</p>
     </div>
 
     <div class="room-grid" id="room-grid"></div>
 
     <div class="charts">
-      <div class="chart-container"><canvas id="tempChart"></canvas></div>
-      <div class="chart-container"><canvas id="energyChart"></canvas></div>
+      <div class="chart-box"><canvas id="tempChart"></canvas></div>
+      <div class="chart-box"><canvas id="energyChart"></canvas></div>
     </div>
 
     <script>
-      const rooms = ["Living Room", "Bedroom", "Kitchen", "Home Office"];
-      const roomColors = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6"];
-      const baseTemps = [22, 28, 32, 25]; // Different baselines to spread chart lines
-      let hour = 13;
+      const rooms = ["Living Room", "Bedroom", "Kitchen", "Office"];
+      const colors = ["#3b82f6", "#10b981", "#f59e0b", "#8b5cf6"];
 
+      // Initialize with simple Dummy Data
       const state = rooms.map((name, i) => ({
         name,
-        color: roomColors[i],
-        temp: baseTemps[i],
-        baseAmbient: baseTemps[i],
-        occupied: false,
-        light: 450,
+        color: colors[i],
+        temp: 24 + i, // Dummy temp
+        occupied: i % 2 === 0, // Alternate occupancy
+        light: 400 + i * 100, // Dummy light levels
         acState: "OFF",
         lightState: "OFF",
         isAuto: true,
-        history: Array(20).fill(baseTemps[i]),
+        history: Array(10).fill(24 + i),
       }));
 
-      function updatePhysics(r) {
-        // 1. Calculate the Target Ambient Temp based on time of day (Sine wave)
-        // Peak heat at 14:00 (2 PM)
-        const timeEffect = Math.sin(((hour - 8) * Math.PI) / 12) * 5;
-        const targetAmbient = r.baseAmbient + timeEffect;
-
-        // 2. Apply AC Cooling or Natural Heating
-        if (r.acState === "COOLING") {
-          // AC is powerful: drops temp by 0.8 degrees per tick
-          if (r.temp > 16) r.temp -= 0.8;
-          else r.temp = 16; // Minimum floor
-        } else {
-          // Natural drift towards ambient if AC is off
-          if (r.temp < targetAmbient) r.temp += 0.2;
-          if (r.temp > targetAmbient) r.temp -= 0.1;
-        }
-
-        // Add tiny bit of jitter
-        r.temp += (Math.random() - 0.5) * 0.1;
-      }
-
-      function updateFSM(r) {
+      function runLogic(r) {
         if (!r.isAuto) return;
+
+        // AC FSM Logic
         if (!r.occupied) r.acState = "OFF";
         else {
           if (r.acState === "OFF")
@@ -200,10 +169,11 @@
           else if (r.acState === "COOLING" && r.temp < 24)
             r.acState = "STANDBY";
         }
+        // Light FSM Logic
         r.lightState = r.occupied && r.light < 300 ? "ON" : "OFF";
       }
 
-      function toggleAppliance(idx, type) {
+      function toggle(idx, type) {
         const r = state[idx];
         r.isAuto = false;
         if (type === "ac") r.acState = r.acState === "OFF" ? "COOLING" : "OFF";
@@ -212,7 +182,7 @@
         render();
       }
 
-      function resumeAuto(idx) {
+      function resume(idx) {
         state[idx].isAuto = true;
         render();
       }
@@ -222,18 +192,18 @@
         grid.innerHTML = state
           .map(
             (r, i) => `
-            <div class="card card-${i}">
-                <div class="mode-indicator ${r.isAuto ? "mode-auto" : "mode-manual"}">${r.isAuto ? "● AUTO" : "● MANUAL"}</div>
+            <div class="card" style="border-top-color: ${r.color}">
+                <span class="mode ${r.isAuto ? "auto" : "manual"}">${r.isAuto ? "AUTO" : "MANUAL"}</span>
                 <h3>${r.name}</h3>
-                <div class="stat"><span>Temperature</span><b style="color:${r.temp > 27 ? "red" : "green"}">${r.temp.toFixed(1)}°C</b></div>
+                <div class="stat"><span>Temp</span><b>${r.temp.toFixed(1)}°C</b></div>
                 <div class="stat"><span>Presence</span><span class="pill ${r.occupied ? "Occupied" : "Empty"}">${r.occupied ? "Occupied" : "Empty"}</span></div>
-                <div class="stat"><span>Light Level</span><b>${Math.round(r.light)}</b></div>
+                <div class="stat"><span>Light Level</span><b>${r.light}</b></div>
                 <div class="stat"><span>AC State</span><span class="pill ${r.acState}">${r.acState}</span></div>
                 <div class="stat"><span>Lights</span><span class="pill ${r.lightState}">${r.lightState}</span></div>
                 <div class="controls">
-                    <button class="btn-ac" onclick="toggleAppliance(${i}, 'ac')">Toggle AC</button>
-                    <button class="btn-light" onclick="toggleAppliance(${i}, 'light')">Toggle Light</button>
-                    ${!r.isAuto ? `<button class="btn-resume" onclick="resumeAuto(${i})">↺ Resume Auto</button>` : ""}
+                    <button class="btn-ac" onclick="toggle(${i}, 'ac')">AC</button>
+                    <button class="btn-light" onclick="toggle(${i}, 'light')">Light</button>
+                    ${!r.isAuto ? `<button class="btn-res" onclick="resume(${i})">Resume Auto</button>` : ""}
                 </div>
             </div>
         `,
@@ -241,50 +211,42 @@
           .join("");
       }
 
+      // Chart Setup
       const tCtx = document.getElementById("tempChart").getContext("2d");
       const eCtx = document.getElementById("energyChart").getContext("2d");
       const tempChart = new Chart(tCtx, {
         type: "line",
         data: {
-          labels: Array(20).fill(""),
-          datasets: state.map((r, i) => ({
+          labels: Array(10).fill(""),
+          datasets: state.map((r) => ({
             label: r.name,
             data: r.history,
             borderColor: r.color,
-            backgroundColor: r.color + "11",
-            fill: true,
             tension: 0.3,
           })),
         },
-        options: {
-          maintainAspectRatio: false,
-          scales: { y: { min: 14, max: 40 } },
-        },
+        options: { maintainAspectRatio: false },
       });
-
       const energyChart = new Chart(eCtx, {
         type: "bar",
         data: {
           labels: rooms,
           datasets: [
-            {
-              label: "kWh",
-              data: [14, 22, 10, 15],
-              backgroundColor: roomColors,
-            },
+            { label: "kWh", data: [12, 15, 8, 10], backgroundColor: colors },
           ],
         },
         options: { maintainAspectRatio: false },
       });
 
+      // Simple Dummy Data Update Loop
       setInterval(() => {
-        hour = (hour + 0.1) % 24;
-        document.getElementById("clock").innerText =
-          `${Math.floor(hour).toString().padStart(2, "0")}:00`;
         state.forEach((r, i) => {
-          if (Math.random() > 0.98) r.occupied = !r.occupied;
-          updatePhysics(r);
-          updateFSM(r);
+          // Just slightly move dummy data for visual effect
+          r.temp += (Math.random() - 0.5) * 0.5;
+          r.light = Math.floor(Math.random() * 1000);
+          if (Math.random() > 0.95) r.occupied = !r.occupied;
+
+          runLogic(r);
           r.history.push(r.temp);
           r.history.shift();
           tempChart.data.datasets[i].data = r.history;
@@ -292,6 +254,7 @@
         tempChart.update("none");
         render();
       }, 2000);
+
       render();
     </script>
   </body>
